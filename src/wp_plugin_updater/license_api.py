@@ -72,8 +72,10 @@ def download_licensed_plugin(download_url, branch):
     """
     print(f"Downloading from {download_url[:50]}...", file=sys.stderr)
 
-    # Switch to branch
-    subprocess.run(['git', 'checkout', branch], check=True)
+    # Switch to branch (create if doesn't exist)
+    result = subprocess.run(['git', 'checkout', branch], capture_output=True)
+    if result.returncode != 0:
+        subprocess.run(['git', 'checkout', '-b', branch], check=True)
 
     # Download to temp file
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
@@ -128,12 +130,12 @@ def download_licensed_plugin(download_url, branch):
         result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
         if result.stdout.strip():
             subprocess.run(['git', 'add', '-A'], check=True)
-            subprocess.run(['git', 'commit', '-m', f"Update to version {version}"], check=True)
+            subprocess.run(['git', 'commit', '-q', '-m', f"Update to version {version}"], check=True)
             subprocess.run(['git', 'tag', f"pro-v{version}"], check=True)
-            subprocess.run(['git', 'push', 'origin', branch, '--tags'], check=True)
-            print(f"Committed version {version} to {branch}")
+            subprocess.run(['git', 'push', '-q', 'origin', branch, '--tags'], check=True)
+            print(f"Committed version {version} to {branch}", file=sys.stderr)
         else:
-            print(f"No changes for version {version}")
+            print(f"No changes for version {version}", file=sys.stderr)
 
     finally:
         os.unlink(tmp_path)

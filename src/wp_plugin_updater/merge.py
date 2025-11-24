@@ -50,8 +50,10 @@ def merge_branches(free_branch, pro_branch, target_branch, strategy='overlay'):
             '-exec', 'cp', '-r', '{}', pro_dir + '/', ';'
         ], check=True)
 
-        # Switch to target branch
-        subprocess.run(['git', 'checkout', target_branch], check=True, capture_output=True)
+        # Switch to target branch (create if doesn't exist)
+        result = subprocess.run(['git', 'checkout', target_branch], capture_output=True)
+        if result.returncode != 0:
+            subprocess.run(['git', 'checkout', '-b', target_branch], check=True)
 
         # Clean target
         subprocess.run([
@@ -95,13 +97,13 @@ def merge_branches(free_branch, pro_branch, target_branch, strategy='overlay'):
         if result.stdout.strip():
             subprocess.run(['git', 'add', '-A'], check=True)
             commit_msg = f"Merge Free v{free_version} and Pro v{pro_version}"
-            subprocess.run(['git', 'commit', '-m', commit_msg], check=True)
+            subprocess.run(['git', 'commit', '-q', '-m', commit_msg], check=True)
             tag = f"funnelkit-v{free_version}-v{pro_version}"
             subprocess.run(['git', 'tag', tag], check=True)
-            subprocess.run(['git', 'push', 'origin', target_branch, '--tags'], check=True)
-            print(f"Merged and committed to {target_branch}")
+            subprocess.run(['git', 'push', '-q', 'origin', target_branch, '--tags'], check=True)
+            print(f"Merged and committed to {target_branch}", file=sys.stderr)
         else:
-            print("No changes after merge")
+            print("No changes after merge", file=sys.stderr)
 
 
 def _get_version_from_branch(branch):
