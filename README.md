@@ -7,7 +7,7 @@ Automate WordPress plugin and theme updates in CI/CD pipelines. Supports both Wo
 - Check for updates from WordPress.org
 - Check for updates from WooCommerce Software Licensing API
 - Download and commit plugin versions to git branches
-- Merge free and premium versions
+- Merge multiple plugin branches
 - Designed for GitHub Actions and other CI/CD environments
 
 ## Installation
@@ -45,8 +45,8 @@ wp-plugin check-license <api_url> <license_key> <plugin_basename> <product_name>
 **Parameters:**
 - `api_url`: License API endpoint (e.g., `https://example.com/?wc-api=upgrade-api&request=pluginupdatecheckall`)
 - `license_key`: Your license key
-- `plugin_basename`: Plugin basename (e.g., `my-plugin-pro/my-plugin-pro.php`)
-- `product_name`: Human-readable product name (e.g., `My Plugin Pro`)
+- `plugin_basename`: Plugin basename (e.g., `plugin-premium/plugin-premium.php`)
+- `product_name`: Human-readable product name (e.g., `Plugin Premium`)
 - `email`: License email
 - `domain`: Your site domain (e.g., `https://yoursite.com`)
 - `instance`: Site+plugin-specific instance ID from WordPress database
@@ -64,18 +64,19 @@ Look for your plugin's SHA1 hash in the output and copy the `instance` value. Th
 ### Download licensed plugin
 ```bash
 wp-plugin download-licensed <download_url> <branch>
-# Example: wp-plugin download-licensed "https://s3.amazonaws.com/..." pro-branch
+# Example: wp-plugin download-licensed "https://s3.amazonaws.com/..." premium-branch
 ```
 
 Downloads the licensed plugin, extracts it, commits to the specified branch, and pushes to origin.
 
-### Merge free and pro branches
+### Merge multiple branches
 ```bash
-wp-plugin merge <free_branch> <pro_branch> <target_branch>
-# Example: wp-plugin merge free-branch pro-branch combined-branch
+wp-plugin merge <branch1> <branch2> [branch3...] [--target=branch] [--no-push]
+# Example: wp-plugin merge base-plugin premium-addon --target=combined
+# Example: wp-plugin merge v1 v2 v3 --no-push  # Merge to working directory without committing
 ```
 
-Merges free and premium plugin versions into a single branch. The free version is used as the base, with premium files overlaid on top.
+Merges multiple plugin branches. The first branch is used as the base, with subsequent branches overlaid on top. Use `--no-push` to merge into working directory without committing (useful for creating PRs).
 
 ## Usage in GitHub Actions
 

@@ -14,7 +14,7 @@ def main():
         print("  download-wordpress <slug> <version> <branch>", file=sys.stderr)
         print("  check-license <api_url> <license_key> <plugin_basename> <product_name> <email> <domain> <instance>", file=sys.stderr)
         print("  download-licensed <url> <branch>", file=sys.stderr)
-        print("  merge <free_branch> <pro_branch> <target_branch>", file=sys.stderr)
+        print("  merge <branch1> <branch2> [branch3...] [--target=branch] [--no-push]", file=sys.stderr)
         sys.exit(1)
 
     command = sys.argv[1]
@@ -43,7 +43,24 @@ def main():
             license_api.download_licensed_plugin(sys.argv[2], sys.argv[3])
 
         elif command == "merge":
-            merge.merge_branches(sys.argv[2], sys.argv[3], sys.argv[4])
+            # Parse branches and flags
+            branches = []
+            target = None
+            push = True
+
+            for arg in sys.argv[2:]:
+                if arg.startswith('--target='):
+                    target = arg.split('=', 1)[1]
+                elif arg == '--no-push':
+                    push = False
+                elif not arg.startswith('--'):
+                    branches.append(arg)
+
+            if len(branches) < 2:
+                print("Error: Need at least 2 branches to merge", file=sys.stderr)
+                sys.exit(1)
+
+            merge.merge(branches, target=target, push=push)
 
         else:
             print(f"Unknown command: {command}", file=sys.stderr)

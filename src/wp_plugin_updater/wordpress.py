@@ -92,7 +92,7 @@ def download_wordpress_plugin(slug, version, branch):
 
         if git_utils.has_changes():
             git_utils.commit(f"Update {slug} to version {version}")
-            git_utils.create_tag(f"free-v{version}")
+            git_utils.create_tag(f"{branch}-v{version}")
             git_utils.push(branch)
             print(f"Committed {slug} v{version} to {branch}", file=sys.stderr)
         else:

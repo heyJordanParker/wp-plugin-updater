@@ -126,7 +126,7 @@ def download_licensed_plugin(download_url, branch):
 
         if git_utils.has_changes():
             git_utils.commit(f"Update to version {version}")
-            git_utils.create_tag(f"pro-v{version}")
+            git_utils.create_tag(f"{branch}-v{version}")
             git_utils.push(branch)
             print(f"Committed version {version} to {branch}", file=sys.stderr)
         else:
