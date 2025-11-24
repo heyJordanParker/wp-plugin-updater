@@ -6,6 +6,7 @@ import tempfile
 import os
 import zipfile
 import sys
+from . import git_utils
 
 
 def check_wordpress_org(slug):
@@ -49,10 +50,7 @@ def download_wordpress_plugin(slug, version, branch):
 
     print(f"Downloading {slug} v{version}...", file=sys.stderr)
 
-    # Switch to branch (create if doesn't exist)
-    result = subprocess.run(['git', 'checkout', branch], capture_output=True)
-    if result.returncode != 0:
-        subprocess.run(['git', 'checkout', '-b', branch], check=True)
+    git_utils.checkout(branch)
 
     # Download to temp file
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
@@ -92,19 +90,10 @@ def download_wordpress_plugin(slug, version, branch):
                 # Copy files to current directory
                 subprocess.run(['cp', '-r', f"{plugin_dir}/.", '.'], check=True)
 
-        # Check for changes
-        result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
-        if result.stdout.strip():
-            subprocess.run(['git', 'add', '-A'], check=True)
-            subprocess.run(['git', 'commit', '-q', '-m', f"Update {slug} to version {version}"], check=True)
-
-            # Create tag if it doesn't exist
-            tag = f"free-v{version}"
-            tag_check = subprocess.run(['git', 'tag', '-l', tag], capture_output=True, text=True)
-            if not tag_check.stdout.strip():
-                subprocess.run(['git', 'tag', tag], check=True)
-
-            subprocess.run(['git', 'push', '-q', 'origin', branch, '--tags'], check=True)
+        if git_utils.has_changes():
+            git_utils.commit(f"Update {slug} to version {version}")
+            git_utils.create_tag(f"free-v{version}")
+            git_utils.push(branch)
             print(f"Committed {slug} v{version} to {branch}", file=sys.stderr)
         else:
             print(f"No changes for {slug} v{version}", file=sys.stderr)

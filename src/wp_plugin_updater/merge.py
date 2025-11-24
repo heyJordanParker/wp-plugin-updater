@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import os
 import sys
+from . import git_utils
 
 
 def merge_branches(free_branch, pro_branch, target_branch, strategy='overlay'):
@@ -50,10 +51,7 @@ def merge_branches(free_branch, pro_branch, target_branch, strategy='overlay'):
             '-exec', 'cp', '-r', '{}', pro_dir + '/', ';'
         ], check=True)
 
-        # Switch to target branch (create if doesn't exist)
-        result = subprocess.run(['git', 'checkout', target_branch], capture_output=True)
-        if result.returncode != 0:
-            subprocess.run(['git', 'checkout', '-b', target_branch], check=True)
+        git_utils.checkout(target_branch)
 
         # Clean target
         subprocess.run([
@@ -92,20 +90,10 @@ def merge_branches(free_branch, pro_branch, target_branch, strategy='overlay'):
         free_version = _get_version_from_branch(free_branch)
         pro_version = _get_version_from_branch(pro_branch)
 
-        # Check for changes and commit
-        result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
-        if result.stdout.strip():
-            subprocess.run(['git', 'add', '-A'], check=True)
-            commit_msg = f"Merge Free v{free_version} and Pro v{pro_version}"
-            subprocess.run(['git', 'commit', '-q', '-m', commit_msg], check=True)
-
-            # Create tag if it doesn't exist
-            tag = f"funnelkit-v{free_version}-v{pro_version}"
-            tag_check = subprocess.run(['git', 'tag', '-l', tag], capture_output=True, text=True)
-            if not tag_check.stdout.strip():
-                subprocess.run(['git', 'tag', tag], check=True)
-
-            subprocess.run(['git', 'push', '-q', 'origin', target_branch, '--tags'], check=True)
+        if git_utils.has_changes():
+            git_utils.commit(f"Merge Free v{free_version} and Pro v{pro_version}")
+            git_utils.create_tag(f"funnelkit-v{free_version}-v{pro_version}")
+            git_utils.push(target_branch)
             print(f"Merged and committed to {target_branch}", file=sys.stderr)
         else:
             print("No changes after merge", file=sys.stderr)

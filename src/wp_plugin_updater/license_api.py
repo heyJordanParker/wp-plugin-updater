@@ -7,6 +7,7 @@ import os
 import zipfile
 import sys
 import hashlib
+from . import git_utils
 
 
 def check_license(api_url, license_key, plugin_basename, product_name, email, domain, instance):
@@ -72,10 +73,7 @@ def download_licensed_plugin(download_url, branch):
     """
     print(f"Downloading from {download_url[:50]}...", file=sys.stderr)
 
-    # Switch to branch (create if doesn't exist)
-    result = subprocess.run(['git', 'checkout', branch], capture_output=True)
-    if result.returncode != 0:
-        subprocess.run(['git', 'checkout', '-b', branch], check=True)
+    git_utils.checkout(branch)
 
     # Download to temp file
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
@@ -126,19 +124,10 @@ def download_licensed_plugin(download_url, branch):
         if not version:
             version = "unknown"
 
-        # Check for changes
-        result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
-        if result.stdout.strip():
-            subprocess.run(['git', 'add', '-A'], check=True)
-            subprocess.run(['git', 'commit', '-q', '-m', f"Update to version {version}"], check=True)
-
-            # Create tag if it doesn't exist
-            tag = f"pro-v{version}"
-            tag_check = subprocess.run(['git', 'tag', '-l', tag], capture_output=True, text=True)
-            if not tag_check.stdout.strip():
-                subprocess.run(['git', 'tag', tag], check=True)
-
-            subprocess.run(['git', 'push', '-q', 'origin', branch, '--tags'], check=True)
+        if git_utils.has_changes():
+            git_utils.commit(f"Update to version {version}")
+            git_utils.create_tag(f"pro-v{version}")
+            git_utils.push(branch)
             print(f"Committed version {version} to {branch}", file=sys.stderr)
         else:
             print(f"No changes for version {version}", file=sys.stderr)
