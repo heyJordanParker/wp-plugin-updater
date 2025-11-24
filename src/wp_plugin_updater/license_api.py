@@ -6,51 +6,60 @@ import tempfile
 import os
 import zipfile
 import sys
+import hashlib
 
 
-def check_license(api_url, license_key, product_id, email):
+def check_license(api_url, license_key, plugin_basename, product_name, email, domain, instance):
     """
     Check license API for plugin/theme version.
 
     Args:
-        api_url: License API endpoint
+        api_url: License API endpoint (e.g., https://license.funnelkit.com/?wc-api=...)
         license_key: License key
-        product_id: Product identifier
+        plugin_basename: Plugin basename (e.g., "funnel-builder-pro/funnel-builder-pro.php")
+        product_name: Human-readable product name (e.g., "Funnel Builder Pro")
         email: License email
+        domain: Site domain
+        instance: Site+plugin-specific instance ID from WordPress database
 
     Returns:
         dict: {'version': '3.13.3', 'download_url': 'https://...'}
     """
-    # Build request data for FunnelKit-style API
+    # Compute hash from plugin basename (WooCommerce Software Licensing API format)
+    hash_key = hashlib.sha1(plugin_basename.encode()).hexdigest()
+
     data = {
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][plugin_slug]': f"{product_id}/{product_id}.php",
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][email]': email,
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][license_key]': license_key,
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][product_id]': product_id,
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][api_key]': license_key,
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][version]': '1.0.0',
-        'plugins[ffec4bb68f0841db41213ce12305aaef7e0237f3][activation_email]': email,
+        f'plugins[{hash_key}][plugin_slug]': plugin_basename,
+        f'plugins[{hash_key}][email]': email,
+        f'plugins[{hash_key}][license_key]': license_key,
+        f'plugins[{hash_key}][product_id]': product_name,
+        f'plugins[{hash_key}][api_key]': license_key,
+        f'plugins[{hash_key}][version]': '3.7.2',
+        f'plugins[{hash_key}][activation_email]': email,
+        f'plugins[{hash_key}][platform]': domain,
+        f'plugins[{hash_key}][domain]': domain,
+        f'plugins[{hash_key}][instance]': instance,
     }
 
     headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'WordPress/6.4; https://example.com'
+        'User-Agent': f'WordPress/6.4; {domain}'
     }
 
+    # Use params instead of data for URL encoding (like curl --data-urlencode)
     response = requests.post(api_url, data=data, headers=headers, timeout=30)
     response.raise_for_status()
 
     result = response.json()
 
-    # Extract from first key (hash-based response)
+    # Extract from hash-keyed response
     for key, value in result.items():
-        if isinstance(value, dict) and 'new_version' in value:
+        if isinstance(value, dict) and 'new_version' in value and 'package' in value:
             return {
                 'version': value['new_version'],
                 'download_url': value['package']
             }
 
-    raise ValueError("No version info found in license API response")
+    raise ValueError(f"No version info found in license API response: {result}")
 
 
 def download_licensed_plugin(download_url, branch):

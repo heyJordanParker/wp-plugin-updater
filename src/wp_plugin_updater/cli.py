@@ -12,7 +12,7 @@ def main():
         print("\nCommands:", file=sys.stderr)
         print("  check-wordpress-org <slug>", file=sys.stderr)
         print("  download-wordpress <slug> <version> <branch>", file=sys.stderr)
-        print("  check-license <api_url> <license_key> <product_id> <email>", file=sys.stderr)
+        print("  check-license <api_url> <license_key> <plugin_basename> <product_name> <email> <domain> <instance>", file=sys.stderr)
         print("  download-licensed <url> <branch>", file=sys.stderr)
         print("  merge <free_branch> <pro_branch> <target_branch>", file=sys.stderr)
         sys.exit(1)
@@ -28,7 +28,15 @@ def main():
             wordpress.download_wordpress_plugin(sys.argv[2], sys.argv[3], sys.argv[4])
 
         elif command == "check-license":
-            result = license_api.check_license(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+            result = license_api.check_license(
+                sys.argv[2],  # api_url
+                sys.argv[3],  # license_key
+                sys.argv[4],  # plugin_basename
+                sys.argv[5],  # product_name
+                sys.argv[6],  # email
+                sys.argv[7],  # domain
+                sys.argv[8]   # instance
+            )
             print(json.dumps(result))
 
         elif command == "download-licensed":
