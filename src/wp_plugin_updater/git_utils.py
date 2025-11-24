@@ -3,13 +3,24 @@
 import subprocess
 
 
-def checkout(branch):
+def reset():
+    """
+    Reset working directory to HEAD.
+    """
+    subprocess.run(['git', 'reset', '--hard'], check=True)
+
+
+def checkout(branch, auto_reset=True):
     """
     Checkout branch, tracking remote if exists, otherwise create new.
 
     Args:
         branch: Branch name to checkout
+        auto_reset: Reset working directory before checkout (default: True)
     """
+    if auto_reset:
+        reset()
+
     subprocess.run(['git', 'fetch', 'origin'], capture_output=True)
     result = subprocess.run(['git', 'checkout', branch], capture_output=True)
     if result.returncode != 0:
@@ -67,3 +78,10 @@ def has_changes():
     """
     result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
     return bool(result.stdout.strip())
+
+
+def reset():
+    """
+    Reset working directory to HEAD.
+    """
+    subprocess.run(['git', 'reset', '--hard'], check=True)
