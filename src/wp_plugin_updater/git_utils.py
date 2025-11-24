@@ -111,7 +111,13 @@ def sync_locked_paths_from_master():
     for path in locked_paths:
         if path == '.git':  # Skip .git itself - can't checkout
             continue
-        subprocess.run(['git', 'checkout', 'origin/master', '--', path], check=True)
+        # Check if path exists in origin/master before trying to checkout
+        check_result = subprocess.run(
+            ['git', 'cat-file', '-e', f'origin/master:{path}'],
+            capture_output=True
+        )
+        if check_result.returncode == 0:
+            subprocess.run(['git', 'checkout', 'origin/master', '--', path], check=True)
 
     if has_changes():
         commit("Sync locked paths from master")
