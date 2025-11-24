@@ -47,14 +47,7 @@ def merge(branches, target=None, strategy='overlay', push=True):
             git_utils.checkout(target)
 
         # Clean working directory
-        subprocess.run([
-            'find', '.', '-maxdepth', '1',
-            '!', '-name', '.git',
-            '!', '-name', '.github',
-            '!', '-name', '.',
-            '!', '-name', '.gitignore',
-            '-exec', 'rm', '-rf', '{}', '+'
-        ], check=True)
+        git_utils.clean_working_directory()
 
         # Apply branches in order
         print("Merging files...", file=sys.stderr)

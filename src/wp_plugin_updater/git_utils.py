@@ -80,8 +80,17 @@ def has_changes():
     return bool(result.stdout.strip())
 
 
-def reset():
+def clean_working_directory():
     """
-    Reset working directory to HEAD.
+    Remove all files except git infrastructure.
+
+    Preserves only .git, .gitignore, and the current directory.
+    Used when downloading plugins to ensure clean state.
     """
-    subprocess.run(['git', 'reset', '--hard'], check=True)
+    subprocess.run([
+        'find', '.', '-maxdepth', '1',
+        '!', '-name', '.git',
+        '!', '-name', '.',
+        '!', '-name', '.gitignore',
+        '-exec', 'rm', '-rf', '{}', '+'
+    ], check=True)

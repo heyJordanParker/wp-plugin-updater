@@ -60,16 +60,8 @@ def download_wordpress_plugin(slug, version, branch):
         tmp_path = tmp.name
 
     try:
-        # Clean current directory (preserve git, scripts, etc.)
-        subprocess.run([
-            'find', '.', '-maxdepth', '1',
-            '!', '-name', '.git',
-            '!', '-name', '.github',
-            '!', '-name', 'scripts',
-            '!', '-name', '.',
-            '!', '-name', '.gitignore',
-            '-exec', 'rm', '-rf', '{}', '+'
-        ], check=True)
+        # Clean current directory
+        git_utils.clean_working_directory()
 
         # Extract plugin
         with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
