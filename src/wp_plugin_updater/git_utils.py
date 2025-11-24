@@ -1,6 +1,10 @@
 """Git utilities for plugin update operations."""
 
+import os
 import subprocess
+
+
+DEFAULT_LOCKED_PATHS = ['.git', '.github', '.gitignore']
 
 
 def reset():
@@ -80,17 +84,52 @@ def has_changes():
     return bool(result.stdout.strip())
 
 
+def get_locked_paths():
+    """
+    Get locked paths from defaults + LOCKED_PATHS env var.
+
+    Returns:
+        list: List of paths to preserve during operations
+    """
+    locked_paths = DEFAULT_LOCKED_PATHS.copy()
+    env_paths = os.environ.get('LOCKED_PATHS', '').strip()
+    if env_paths:
+        locked_paths.extend(env_paths.split(','))
+    return locked_paths
+
+
+def sync_locked_paths_from_master():
+    """
+    Hard reset locked paths from master branch.
+
+    Fetches master and checks out locked paths from it,
+    then commits if there are changes.
+    """
+    locked_paths = get_locked_paths()
+    subprocess.run(['git', 'fetch', 'origin', 'master:refs/remotes/origin/master'], check=True)
+
+    for path in locked_paths:
+        if path == '.git':  # Skip .git itself - can't checkout
+            continue
+        subprocess.run(['git', 'checkout', 'origin/master', '--', path], check=True)
+
+    if has_changes():
+        commit("Sync locked paths from master")
+
+
 def clean_working_directory():
     """
-    Remove all files except git infrastructure.
+    Remove all files except locked paths.
 
-    Preserves only .git, .gitignore, and the current directory.
+    Preserves paths from get_locked_paths() and the current directory.
     Used when downloading plugins to ensure clean state.
     """
-    subprocess.run([
-        'find', '.', '-maxdepth', '1',
-        '!', '-name', '.git',
-        '!', '-name', '.',
-        '!', '-name', '.gitignore',
-        '-exec', 'rm', '-rf', '{}', '+'
-    ], check=True)
+    locked_paths = get_locked_paths()
+    exclude_args = ['!', '-name', '.']
+    for path in locked_paths:
+        exclude_args.extend(['!', '-name', path])
+
+    subprocess.run(
+        ['find', '.', '-maxdepth', '1'] + exclude_args + ['-exec', 'rm', '-rf', '{}', '+'],
+        check=True
+    )

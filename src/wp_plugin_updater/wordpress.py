@@ -51,6 +51,7 @@ def download_wordpress_plugin(slug, version, branch):
     print(f"Downloading {slug} v{version}...", file=sys.stderr)
 
     git_utils.checkout(branch)
+    git_utils.sync_locked_paths_from_master()
 
     # Download to temp file
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:

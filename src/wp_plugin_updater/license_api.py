@@ -74,6 +74,7 @@ def download_licensed_plugin(download_url, branch):
     print(f"Downloading from {download_url[:50]}...", file=sys.stderr)
 
     git_utils.checkout(branch)
+    git_utils.sync_locked_paths_from_master()
 
     # Download to temp file
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
