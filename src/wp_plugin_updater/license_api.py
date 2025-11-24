@@ -131,7 +131,13 @@ def download_licensed_plugin(download_url, branch):
         if result.stdout.strip():
             subprocess.run(['git', 'add', '-A'], check=True)
             subprocess.run(['git', 'commit', '-q', '-m', f"Update to version {version}"], check=True)
-            subprocess.run(['git', 'tag', f"pro-v{version}"], check=True)
+
+            # Create tag if it doesn't exist
+            tag = f"pro-v{version}"
+            tag_check = subprocess.run(['git', 'tag', '-l', tag], capture_output=True, text=True)
+            if not tag_check.stdout.strip():
+                subprocess.run(['git', 'tag', tag], check=True)
+
             subprocess.run(['git', 'push', '-q', 'origin', branch, '--tags'], check=True)
             print(f"Committed version {version} to {branch}", file=sys.stderr)
         else:
