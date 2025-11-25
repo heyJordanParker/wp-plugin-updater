@@ -77,8 +77,11 @@ def download_licensed_plugin(download_url, branch):
     git_utils.sync_locked_paths_from_master()
 
     # Download to temp file
+    headers = {
+        'User-Agent': 'WordPress/6.4; https://parkerlabs.co'
+    }
     with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp:
-        response = requests.get(download_url, timeout=120)
+        response = requests.get(download_url, headers=headers, timeout=120)
         response.raise_for_status()
         tmp.write(response.content)
         tmp_path = tmp.name
