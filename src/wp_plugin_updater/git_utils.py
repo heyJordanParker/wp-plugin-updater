@@ -4,7 +4,7 @@ import os
 import subprocess
 
 
-DEFAULT_LOCKED_PATHS = ['.git', '.github', '.gitignore']
+DEFAULT_LOCKED_PATHS = ['.git', '.github', '.gitignore', 'composer.json']
 
 
 def reset():
