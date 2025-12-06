@@ -10,6 +10,7 @@ authors = [{name = "Jordan Parker"}]
 requires-python = ">=3.8"
 dependencies = [
     "requests>=2.31.0",
+    "packaging>=23.0",
 ]
 
 [project.scripts]

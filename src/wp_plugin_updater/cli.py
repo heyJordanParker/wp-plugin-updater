@@ -2,7 +2,7 @@
 
 import sys
 import json
-from . import wordpress, license_api, merge, composer
+from . import wordpress, license_api, merge, composer, version
 
 
 def main():
@@ -16,6 +16,7 @@ def main():
         print("  download-licensed <url> <branch>", file=sys.stderr)
         print("  merge <branch1> <branch2> [branch3...] [--target=branch] [--no-push]", file=sys.stderr)
         print("  generate-composer <name> <version> <type> [--vendor=creatorincome] [--description=...]", file=sys.stderr)
+        print("  is-newer <candidate> <current>", file=sys.stderr)
         sys.exit(1)
 
     command = sys.argv[1]
@@ -64,9 +65,9 @@ def main():
             merge.merge(branches, target=target, push=push)
 
         elif command == "generate-composer":
-            # Parse args: name, version, type, then optional flags
+            # Parse args: name, package_version, type, then optional flags
             name = sys.argv[2]
-            version = sys.argv[3]
+            package_version = sys.argv[3]
             package_type = sys.argv[4]
             vendor = "creatorincome"
             description = None
@@ -77,8 +78,14 @@ def main():
                 elif arg.startswith('--description='):
                     description = arg.split('=', 1)[1]
 
-            composer.write_composer_json(name, version, package_type, description, vendor)
-            print(f"Generated composer.json for {vendor}/{name} v{version}", file=sys.stderr)
+            composer.write_composer_json(name, package_version, package_type, description, vendor)
+            print(f"Generated composer.json for {vendor}/{name} v{package_version}", file=sys.stderr)
+
+        elif command == "is-newer":
+            candidate = sys.argv[2]
+            current = sys.argv[3]
+            result = version.is_newer(candidate, current)
+            print(json.dumps({"is_newer": result, "candidate": candidate, "current": current}))
 
         else:
             print(f"Unknown command: {command}", file=sys.stderr)
