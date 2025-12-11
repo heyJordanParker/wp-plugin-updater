@@ -48,6 +48,9 @@ def write_composer_json(
     """
     Generate and write composer.json to disk.
 
+    If composer.json already exists, merges with it (CLI args override,
+    existing fields like autoload/extra are preserved).
+
     Args:
         name: Package name
         version: Version string
@@ -56,8 +59,23 @@ def write_composer_json(
         vendor: Composer vendor namespace
         path: Directory to write to (default: current directory)
     """
-    composer = generate_composer_json(name, version, package_type, description, vendor)
     file_path = os.path.join(path, "composer.json")
+
+    # Start with existing file or empty dict
+    if os.path.exists(file_path):
+        with open(file_path) as f:
+            composer = json.load(f)
+    else:
+        composer = {}
+
+    # CLI args always override
+    composer["name"] = f"{vendor}/{name}"
+    composer["type"] = package_type
+    composer["version"] = version
+    composer["license"] = "proprietary"
+
+    if description:
+        composer["description"] = description
 
     with open(file_path, "w") as f:
         json.dump(composer, f, indent=2)
