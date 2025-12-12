@@ -31,6 +31,8 @@ def merge(branches, target=None, strategy='overlay', push=True):
             os.makedirs(branch_dir)
 
             print(f"Copying {branch}...", file=sys.stderr)
+            # Clean untracked files before checkout to prevent stale dirs from previous merges
+            subprocess.run(['git', 'clean', '-fd'], check=True)
             subprocess.run(['git', 'checkout', branch, '--', '.'], check=True)
             subprocess.run([
                 'find', '.', '-maxdepth', '1',
