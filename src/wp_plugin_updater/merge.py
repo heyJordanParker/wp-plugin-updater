@@ -3,6 +3,7 @@
 import subprocess
 import tempfile
 import os
+import re
 import sys
 from . import git_utils
 
@@ -73,10 +74,13 @@ def merge(branches, target=None, strategy='overlay', push=True):
                         src = os.path.join(branch_dir, entry)
                         subprocess.run(['cp', '-r', src, f'{subdir}/'], check=True)
 
-                    # Generate thin loader at root
+                    # Extract headers from main plugin and generate stub with headers
+                    main_plugin_path = os.path.join(branch_dir, main_plugin)
+                    headers = _extract_plugin_headers(main_plugin_path)
+                    stub_content = _generate_stub_with_headers(headers, subdir, main_plugin)
                     with open(f'{plugin_name}.php', 'w') as f:
-                        f.write(f"<?php\nrequire_once __DIR__ . '/{subdir}/{main_plugin}';\n")
-                    print(f"Created loader: {plugin_name}.php", file=sys.stderr)
+                        f.write(stub_content)
+                    print(f"Created loader: {plugin_name}.php (with {len(headers)} headers)", file=sys.stderr)
                 else:
                     # Fallback: old behavior for branches without clear main plugin
                     # Copy modules directory if exists
@@ -138,6 +142,65 @@ def _find_main_plugin_file(branch_dir):
         except:
             continue
     return None
+
+
+def _extract_plugin_headers(file_path):
+    """Extract WordPress plugin headers from a PHP file.
+
+    Returns dict with header keys (e.g., 'Plugin Name', 'Version', 'Author').
+    """
+    headers = {}
+    header_keys = [
+        'Plugin Name', 'Plugin URI', 'Description', 'Version',
+        'Author', 'Author URI', 'License', 'License URI',
+        'Text Domain', 'Domain Path', 'Network', 'Requires at least',
+        'Requires PHP', 'Update URI'
+    ]
+
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read(8192)  # Headers should be in first 8KB
+    except:
+        return headers
+
+    for key in header_keys:
+        # Match "Key: Value" pattern, handling multiline
+        pattern = rf'{re.escape(key)}\s*:\s*(.+?)(?:\n\s*\*|$)'
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            value = match.group(1).strip()
+            # Clean up trailing comment artifacts
+            value = re.sub(r'\s*\*+/?$', '', value).strip()
+            if value:
+                headers[key] = value
+
+    return headers
+
+
+def _generate_stub_with_headers(headers, subdir, main_plugin):
+    """Generate a stub PHP file with WordPress plugin headers.
+
+    Returns the complete PHP content for the stub file.
+    """
+    lines = ['<?php', '/**']
+
+    # Standard header order
+    header_order = [
+        'Plugin Name', 'Plugin URI', 'Description', 'Version',
+        'Author', 'Author URI', 'License', 'License URI',
+        'Text Domain', 'Domain Path', 'Network', 'Requires at least',
+        'Requires PHP', 'Update URI'
+    ]
+
+    for key in header_order:
+        if key in headers:
+            lines.append(f' * {key}: {headers[key]}')
+
+    lines.append(' */')
+    lines.append(f"require_once __DIR__ . '/{subdir}/{main_plugin}';")
+    lines.append('')  # Trailing newline
+
+    return '\n'.join(lines)
 
 
 def _get_version_from_branch(branch):
