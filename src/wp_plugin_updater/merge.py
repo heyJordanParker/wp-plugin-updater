@@ -31,17 +31,18 @@ def merge(branches, target=None, strategy='overlay', push=True):
             os.makedirs(branch_dir)
 
             print(f"Copying {branch}...", file=sys.stderr)
-            # Clean untracked files before checkout to prevent stale dirs from previous merges
-            subprocess.run(['git', 'clean', '-fd'], check=True)
-            subprocess.run(['git', 'checkout', branch, '--', '.'], check=True)
-            subprocess.run([
-                'find', '.', '-maxdepth', '1',
-                '!', '-name', '.git',
-                '!', '-name', '.github',
-                '!', '-name', '.',
-                '!', '-name', '.gitignore',
-                '-exec', 'cp', '-r', '{}', branch_dir + '/', ';'
-            ], check=True)
+            # Use git archive to extract clean branch content without working dir pollution
+            archive = subprocess.run(
+                ['git', 'archive', '--format=tar', branch],
+                capture_output=True,
+                check=True
+            )
+            # Exclude .github and .gitignore (these come from target branch only)
+            subprocess.run(
+                ['tar', '-xf', '-', '-C', branch_dir, '--exclude=.github', '--exclude=.gitignore'],
+                input=archive.stdout,
+                check=True
+            )
 
             branch_dirs.append(branch_dir)
 
