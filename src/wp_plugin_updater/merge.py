@@ -60,25 +60,44 @@ def merge(branches, target=None, strategy='overlay', push=True):
             for i in range(1, len(branch_dirs)):
                 branch_dir = branch_dirs[i]
 
-                # Copy modules directory if exists
-                modules_dir = os.path.join(branch_dir, 'modules')
-                if os.path.exists(modules_dir):
-                    if os.path.exists('modules'):
-                        subprocess.run(['cp', '-r', f"{modules_dir}/.", 'modules/'], check=True)
-                    else:
-                        subprocess.run(['cp', '-r', modules_dir, '.'], check=True)
+                # Find main plugin file to determine plugin name
+                main_plugin = _find_main_plugin_file(branch_dir)
+                if main_plugin:
+                    plugin_name = main_plugin[:-4]  # Remove .php
+                    print(f"Relocating {plugin_name} to subdirectory...", file=sys.stderr)
 
-                # Copy main plugin files (PHP files in root)
-                for file in os.listdir(branch_dir):
-                    file_path = os.path.join(branch_dir, file)
-                    if os.path.isfile(file_path) and file.endswith('.php'):
-                        subprocess.run(['cp', file_path, '.'], check=True)
+                    # Copy entire branch into subdirectory
+                    subdir = plugin_name
+                    os.makedirs(subdir, exist_ok=True)
+                    for entry in os.listdir(branch_dir):
+                        src = os.path.join(branch_dir, entry)
+                        subprocess.run(['cp', '-r', src, f'{subdir}/'], check=True)
 
-                # Copy other specific files
-                for file in ['changelog.txt', 'loco.xml']:
-                    src = os.path.join(branch_dir, file)
-                    if os.path.exists(src):
-                        subprocess.run(['cp', src, '.'], check=True)
+                    # Generate thin loader at root
+                    with open(f'{plugin_name}.php', 'w') as f:
+                        f.write(f"<?php\nrequire_once __DIR__ . '/{subdir}/{main_plugin}';\n")
+                    print(f"Created loader: {plugin_name}.php", file=sys.stderr)
+                else:
+                    # Fallback: old behavior for branches without clear main plugin
+                    # Copy modules directory if exists
+                    modules_dir = os.path.join(branch_dir, 'modules')
+                    if os.path.exists(modules_dir):
+                        if os.path.exists('modules'):
+                            subprocess.run(['cp', '-r', f"{modules_dir}/.", 'modules/'], check=True)
+                        else:
+                            subprocess.run(['cp', '-r', modules_dir, '.'], check=True)
+
+                    # Copy main plugin files (PHP files in root)
+                    for file in os.listdir(branch_dir):
+                        file_path = os.path.join(branch_dir, file)
+                        if os.path.isfile(file_path) and file.endswith('.php'):
+                            subprocess.run(['cp', file_path, '.'], check=True)
+
+                    # Copy other specific files
+                    for file in ['changelog.txt', 'loco.xml']:
+                        src = os.path.join(branch_dir, file)
+                        if os.path.exists(src):
+                            subprocess.run(['cp', src, '.'], check=True)
 
         # Get versions for commit message
         versions = []
@@ -97,6 +116,28 @@ def merge(branches, target=None, strategy='overlay', push=True):
             print(f"Merged to working directory (uncommitted)", file=sys.stderr)
         else:
             print("No changes after merge", file=sys.stderr)
+
+
+def _find_main_plugin_file(branch_dir):
+    """Find the main plugin PHP file in a branch directory.
+
+    Looks for a PHP file with 'Plugin Name:' header, excluding index.php.
+    Returns filename (e.g., 'fluent-community-pro.php') or None.
+    """
+    for file in os.listdir(branch_dir):
+        if not file.endswith('.php') or file == 'index.php':
+            continue
+        file_path = os.path.join(branch_dir, file)
+        if not os.path.isfile(file_path):
+            continue
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read(2048)  # First 2KB should contain header
+                if 'Plugin Name:' in content:
+                    return file
+        except:
+            continue
+    return None
 
 
 def _get_version_from_branch(branch):
