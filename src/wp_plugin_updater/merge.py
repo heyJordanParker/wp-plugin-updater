@@ -200,7 +200,11 @@ def _generate_stub_with_headers(headers, subdir, main_plugin):
 
     for key in header_order:
         if key in headers:
-            lines.append(f' * {key}: {headers[key]}')
+            value = headers[key]
+            # Adjust Domain Path to account for subdirectory relocation
+            if key == 'Domain Path' and value.startswith('/'):
+                value = f'/{subdir}{value}'
+            lines.append(f' * {key}: {value}')
 
     lines.append(' */')
     lines.append(f"require_once __DIR__ . '/{subdir}/{main_plugin}';")
