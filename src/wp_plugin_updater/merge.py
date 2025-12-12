@@ -147,6 +147,11 @@ def _find_main_plugin_file(branch_dir):
 def _extract_plugin_headers(file_path):
     """Extract WordPress plugin headers from a PHP file.
 
+    Handles common formats:
+    - Docblock: /** * Plugin Name: Foo */
+    - Simple:   /* Plugin Name: Foo */
+    - Mixed:    /* * Plugin Name: Foo */
+
     Returns dict with header keys (e.g., 'Plugin Name', 'Version', 'Author').
     """
     headers = {}
@@ -164,12 +169,13 @@ def _extract_plugin_headers(file_path):
         return headers
 
     for key in header_keys:
-        # Match "Key: Value" pattern, handling multiline
-        pattern = rf'{re.escape(key)}\s*:\s*(.+?)(?:\n\s*\*|$)'
-        match = re.search(pattern, content, re.IGNORECASE)
+        # Match "Key: Value" - value extends to end of line
+        # Handles: "Plugin Name: Foo", " * Plugin Name: Foo", etc.
+        pattern = rf'^\s*\*?\s*{re.escape(key)}\s*:\s*(.+?)$'
+        match = re.search(pattern, content, re.IGNORECASE | re.MULTILINE)
         if match:
             value = match.group(1).strip()
-            # Clean up trailing comment artifacts
+            # Clean up trailing comment artifacts (*, */, whitespace)
             value = re.sub(r'\s*\*+/?$', '', value).strip()
             if value:
                 headers[key] = value
